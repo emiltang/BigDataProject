@@ -1,10 +1,10 @@
-# Configs and scripts
+# Configs and Scripts
 
 Put all code and project specific config file here and use symlinks if strictly nesecary (ln -s) 
 
 Use `git -c "user.name=Your Name" -c "user.email=Your email" commit` when comitting code.
 
-# Flume
+## Flume
 
 Apperantly this expection is harmless
 
@@ -18,3 +18,6 @@ java.lang.InterruptedException
         at org.apache.hadoop.hdfs.DataStreamer.endBlock(DataStreamer.java:640)
         at org.apache.hadoop.hdfs.DataStreamer.run(DataStreamer.java:810)
 ```
+https://stackoverflow.com/questions/39351690/got-interruptedexception-while-executing-word-count-mapreduce-job
+
+https://issues.apache.org/jira/browse/HDFS-10429
