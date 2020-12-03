@@ -1,89 +1,70 @@
-import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
-import org.apache.spark.SparkConf
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.catalyst.dsl.expressions._
+import org.apache.spark.sql.functions.from_json
+import org.apache.spark.sql.types._
 import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 import org.apache.spark.streaming.kafka010.KafkaUtils
 import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 
+object GeoMapping extends App {
 
-object GeoMapping {
-
-  val topics = Array("twitter")
-
-  val kafkaParams = Map[String, Object](
-    "bootstrap.servers" -> "localhost:9092",
-    "key.deserializer" -> classOf[StringDeserializer],
-    "value.deserializer" -> classOf[StringDeserializer],
-    "group.id" -> "use_a_separate_group_id_for_each_stream",
-    "auto.offset.reset" -> "earliest"
-    // "enable.auto.commit" -> (false: java.lang.Boolean)
-  )
-
-  def main(args: Array[String]): Unit = {
-
-    val schema = StructType(
-      StructField(
-        "data",
-        StructType(
-          StructField("id", StringType),
-          StructField("text", StringType),
-          StructField("author_id", StringType)
-        )
-      ),
-      StructField(
-        "includes",
-        StructType(
-          StructType(
-            "users",
-            List(
-              StructType(
-                StructField("id", StringType),
-                StructField("name", StringType),
-                StructField("location", StringType),
-                StructField("usrname", StringType)
-              )
+  val schema = StructType(
+    StructField(
+      "data",
+      StructType(
+        StructField("id", StringType) ::
+          StructField("text", StringType) ::
+          StructField("author_id", StringType) :: Nil
+      )
+    ) :: StructField(
+      "includes",
+      StructType(
+        StructField(
+          "users",
+          ArrayType(
+            StructType(
+              StructField("id", StringType) ::
+                StructField("name", StringType) ::
+                StructField("location", StringType) ::
+                StructField("username", StringType) :: Nil
             )
           )
-        )
-      ),
-      StructField(
-        "matching_rules",
-        List(
-          StructType(
-            StructField("id", LongType),
-            StructField("tag", StringType, true)
-          )
+        ) :: Nil
+      )
+    ) :: StructField(
+      "matching_rules",
+      ArrayType(
+        StructType(
+          StructField("id", LongType) ::
+            StructField("tag", StringType, nullable = true) :: Nil
         )
       )
-    )
+    ) :: Nil
+  )
 
-    val sparkConf = new SparkConf()
-      .setAppName("GeoMapping")
-      .setMaster("spark://node-master:7077")
+  val spark = SparkSession
+    .builder()
+    .appName("GeoMapper")
+    .master("local[*]")
+    .getOrCreate()
 
-    val streamingContext = new StreamingContext(sparkConf, Seconds(10))
+  val kafka = spark.readStream
+    .format("kafka")
+    .option("kafka.bootstrap.servers", "localhost:9092")
+    .option("zookeeper.connect", "localhost:2181")
+    .option("subscribe", "twitter")
+    .option("startingOffsets", "earliest")
+    .option("max.poll.records", 10)
+    .option("failOnDataLoss", value = false)
+    .load()
 
-    val stream = KafkaUtils.createDirectStream[String, String](
-      streamingContext,
-      PreferConsistent,
-      Subscribe[String, String](topics, kafkaParams)
-    )
-    println("--- begin ---")
+  import spark.implicits._
 
-    stream.map(record => "key" + record.key() + " value" + record.value())
-
-    //stream.foreachRDD(rdd => rdd.foreach(item => println(item)))
-
-    stream.print()
-
-    //stream.print()
-
-    streamingContext.start()
-    streamingContext.awaitTermination()
-
-    println("hello world")
-    println("---  end  ---")
-  }
+  val df = kafka.select(from_json($"value".cast(StringType), schema))
+  
+  display(df)
 
 }
