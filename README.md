@@ -4,9 +4,18 @@ Put all code and project specific config file here and use symlinks if strictly 
 
 Use `git -c "user.name=Your Name" -c "user.email=Your email" commit` when comitting code.
 
+## Twitter Producer
+
+Start in background with:
+
+```
+./twitter_producer.py > /dev/null 2> twitter_producer.log &
+disown <pid> # pid here
+```
+
 ## Flume
 
-Apperantly this expection is harmless
+Apperantly this exception is harmless
 
 ```
 ARN - org.apache.hadoop.hdfs.DataStreamer.closeResponder(DataStreamer.java:988)] Caught exception
@@ -21,3 +30,17 @@ java.lang.InterruptedException
 https://stackoverflow.com/questions/39351690/got-interruptedexception-while-executing-word-count-mapreduce-job
 
 https://issues.apache.org/jira/browse/HDFS-10429
+
+## SSH Port Forwarding
+
+To acces the webserver add:
+
+`ssh -L 5000:127.0.0.1:5000 group7-node0`
+
+or add:
+
+`LocalForward 127.0.0.1:5000 bddst-group7-node0.uvm.sdu.dk:5000`
+
+to:
+
+`~/.ssh/config`

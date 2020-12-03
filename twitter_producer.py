@@ -19,6 +19,7 @@ kafka = KafkaProducer(
 )
 
 api = TwitterAPI(
+    # get credentials form environment
     consumer_key=getenv('CONSUMER_KEY'),
     consumer_secret=getenv('CONSUMER_SECRET'),
     # access_token_key=getenv('ACCES_TOKEN_KEY'),
@@ -43,16 +44,17 @@ if __name__ == '__main__':
             print('Starting stream')
             stream = api.request('tweets/search/stream', {
                 'expansions': EXPANSIONS,
-                'user.fields': USER_FIELDS
+                'user.fields': USER_FIELDS,
+                'place.fields': PLACE_FIELDS
             })
 
-            # handle unsuccesfull http error sucj as 4xx and 5xx
+            # handle unsuccesfull http error such as 4xx and 5xx
             if stream.status_code != 200:
                 print(stream.status_code, stream.text, file=stderr)
                 exit()
 
             for result in stream:
-
+                
                 if 'disconnect' in result:
                     event = result['disconnect']
                     if event['code'] in [2, 5, 6, 7]:
