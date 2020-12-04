@@ -57,11 +57,9 @@ object GeoMapping extends App {
     .option("includeHeaders", "true")
     .load()
 
-  val df = kafka.select(from_json($"value".cast(StringType), schema))
+  val df = kafka.select(from_json($"value".cast("string"), schema).alias("value"))
 
-  val locations = df.select($"includes.users")
-
-  locations.writeStream
+  df.writeStream
     .outputMode("append")
     .format("console")
     .start()
