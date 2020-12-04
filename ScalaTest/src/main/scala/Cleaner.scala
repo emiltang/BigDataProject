@@ -66,6 +66,7 @@ object Cleaner extends App {
     .format("kafka")
     .option("kafka.bootstrap.servers", "host1:port1,host2:port2")
     .option("topic", "locations")
+    .option("checkpointLocation", "hdfs:///kafka-checkpoint")
     .start()
     .awaitTermination()
 }
