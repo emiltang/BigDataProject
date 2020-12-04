@@ -61,7 +61,7 @@ object Cleaner extends App {
     // Unwrap json array
     .withColumn("location", explode($"location"))
     .filter($"location" =!= "null")
-    .select(to_json($"location").alias("value"))
+    .select(to_json(struct($"location")) as "value")
     .writeStream
     .format("kafka")
     .option("kafka.bootstrap.servers", "host1:port1,host2:port2")
