@@ -1,5 +1,4 @@
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
@@ -47,22 +46,25 @@ object GeoMapping extends App {
 
   import spark.implicits._
 
-  val kafka = spark.readStream
+  spark.readStream
     .format("kafka")
     .option("kafka.bootstrap.servers", "localhost:9092")
     .option("subscribe", "twitter")
     .option("startingOffsets", "earliest")
     .option("max.poll.records", 10)
     .option("failOnDataLoss", value = false)
-    .option("includeHeaders", "true")
     .load()
-
-  val df = kafka.select(from_json($"value".cast("string"), schema).alias("value"))
-
-  df.writeStream
+    .select($"value".cast("string"))
+    // Serialize Json
+    .select(from_json($"value", schema).alias("value"))
+    .select($"value.includes.users.location")
+    // Unwrap json array
+    .withColumn("location", explode($"location"))
+    .filter($"location" =!= "null")
+    .writeStream
     .outputMode("append")
     .format("console")
+    .option("truncate", value = false)
     .start()
-    .awaitTermination();
-
+    .awaitTermination()
 }
