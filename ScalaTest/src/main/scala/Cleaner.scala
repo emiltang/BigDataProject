@@ -2,7 +2,7 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
-object GeoMapping extends App {
+object Cleaner extends App {
 
   val schema = StructType(
     StructField(
@@ -61,10 +61,11 @@ object GeoMapping extends App {
     // Unwrap json array
     .withColumn("location", explode($"location"))
     .filter($"location" =!= "null")
+    .select(to_json($"location").alias("value"))
     .writeStream
-    .outputMode("append")
-    .format("console")
-    .option("truncate", value = false)
+    .format("kafka")
+    .option("kafka.bootstrap.servers", "host1:port1,host2:port2")
+    .option("topic", "locations")
     .start()
     .awaitTermination()
 }
