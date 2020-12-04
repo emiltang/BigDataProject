@@ -1,13 +1,7 @@
-import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.sql.catalyst.dsl.expressions._
-import org.apache.spark.sql.functions.from_json
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
-import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
-import org.apache.spark.streaming.kafka010.KafkaUtils
-import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
-import org.apache.spark.streaming.{Seconds, StreamingContext}
 
 object GeoMapping extends App {
 
@@ -51,20 +45,26 @@ object GeoMapping extends App {
     .master("local[*]")
     .getOrCreate()
 
+  import spark.implicits._
+
   val kafka = spark.readStream
     .format("kafka")
     .option("kafka.bootstrap.servers", "localhost:9092")
-    .option("zookeeper.connect", "localhost:2181")
     .option("subscribe", "twitter")
     .option("startingOffsets", "earliest")
     .option("max.poll.records", 10)
     .option("failOnDataLoss", value = false)
+    .option("includeHeaders", "true")
     .load()
 
-  import spark.implicits._
-
   val df = kafka.select(from_json($"value".cast(StringType), schema))
-  
-  display(df)
+
+  val locations = df.select($"includes.users")
+
+  locations.writeStream
+    .outputMode("append")
+    .format("console")
+    .start()
+    .awaitTermination();
 
 }
