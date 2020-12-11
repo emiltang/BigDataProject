@@ -10,7 +10,7 @@ import org.apache.spark.sql.functions.{struct, to_json, udf}
 object Main extends App {
 
   val Nominamitm = new JsonNominatimClient(
-    "http://localhost:7070",
+    "http://node1:7070",
     HttpClients.createDefault,
     "emikr15@student.sdu.dk"
   )
