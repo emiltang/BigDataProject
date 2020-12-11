@@ -64,7 +64,7 @@ object Main extends App {
   //val json = addresses.select($"value.*").select(to_json(struct("state", "country")) as "value")
 
   addresses.writeStream
-    .outputMode("complete")
+    .outputMode("append")
     .format("console")
     .option("truncate", "false")
     .start()
