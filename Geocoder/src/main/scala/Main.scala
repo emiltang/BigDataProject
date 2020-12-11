@@ -51,10 +51,10 @@ object Main extends App {
   val in = spark.readStream
     .format("kafka")
     .option("kafka.bootstrap.servers", "localhost:9092")
-    .option("subscribe", "twitter")
+    .option("subscribe", "locations")
     .option("startingOffsets", "earliest")
-    .option("max.poll.records", 10)
-    .option("failOnDataLoss", value = false)
+   // .option("max.poll.records", 10)
+    //.option("failOnDataLoss", value = false)
     .load()
 
   val addresses = in
