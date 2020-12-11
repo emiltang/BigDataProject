@@ -61,9 +61,9 @@ object Main extends App {
     .select($"value".cast("string"))
     .withColumn("value", geocode($"value"))
 
-  val json = addresses.select($"value.*").select(to_json(struct("state", "country")) as "value")
+  //val json = addresses.select($"value.*").select(to_json(struct("state", "country")) as "value")
 
-  json.writeStream
+  addresses.writeStream
     .outputMode("complete")
     .format("console")
     .option("truncate", "false")
