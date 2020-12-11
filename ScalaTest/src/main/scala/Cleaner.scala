@@ -2,7 +2,11 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
+
+
 object Cleaner extends App {
+
+  val kafkaURL = "localhost:9092"
 
   val schema = StructType(
     StructField(
@@ -48,10 +52,10 @@ object Cleaner extends App {
 
   spark.readStream
     .format("kafka")
-    .option("kafka.bootstrap.servers", "localhost:9092")
+    .option("kafka.bootstrap.servers", kafkaURL)
     .option("subscribe", "twitter")
     .option("startingOffsets", "earliest")
-    .option("max.poll.records", 10)
+    //.option("max.poll.records", 10)
     .option("failOnDataLoss", value = false)
     .load()
     .select($"value".cast("string"))
@@ -61,10 +65,11 @@ object Cleaner extends App {
     // Unwrap json array
     .withColumn("location", explode($"location"))
     .filter($"location" =!= "null")
-    .select(to_json(struct($"location")) as "value")
+    //.select(to_json(struct($"location")) as "value")
+    .select($"location" as "value")
     .writeStream
     .format("kafka")
-    .option("kafka.bootstrap.servers", "host1:port1,host2:port2")
+    .option("kafka.bootstrap.servers", kafkaURL)
     .option("topic", "locations")
     .option("checkpointLocation", "hdfs:///kafka-checkpoint")
     .start()
