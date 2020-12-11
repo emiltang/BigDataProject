@@ -4,7 +4,7 @@ import fr.dudie.nominatim.client.JsonNominatimClient
 import fr.dudie.nominatim.client.request.NominatimSearchRequest
 import org.apache.http.impl.client.HttpClients
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions.{struct, to_json, udf}
+import org.apache.spark.sql.functions.udf
 
 
 object Main extends App {
@@ -21,10 +21,11 @@ object Main extends App {
       request.setAddress(true)
       request.setQuery(query)
 
-      val address = client
-        .search(request)
-        .get(0)
-        .getAddressElements
+      val result = client.search(request)
+
+      if (result.size == 0) return None
+
+      val address = result.get(0).getAddressElements
 
       val state = address.find(_.getKey == "state").map(_.getValue)
       val country = address.find(_.getKey == "country").map(_.getValue)
@@ -53,7 +54,7 @@ object Main extends App {
     .option("kafka.bootstrap.servers", "localhost:9092")
     .option("subscribe", "locations")
     .option("startingOffsets", "earliest")
-   // .option("max.poll.records", 10)
+    // .option("max.poll.records", 10)
     //.option("failOnDataLoss", value = false)
     .load()
 
@@ -71,12 +72,12 @@ object Main extends App {
     .awaitTermination()
 
   //  json.writeStream
-//    .format("kafka")
-//    .option("kafka.bootstrap.servers",)
-//    .option("topic", "locations")
-//    .option("checkpointLocation", "hdfs:///kafka-checkpoint")
-//    .start()
-//    .awaitTermination()
+  //    .format("kafka")
+  //    .option("kafka.bootstrap.servers",)
+  //    .option("topic", "locations")
+  //    .option("checkpointLocation", "hdfs:///kafka-checkpoint")
+  //    .start()
+  //    .awaitTermination()
 
   //case class Address(state: String = "", country: String = "")
 
