@@ -37,19 +37,20 @@ object Main extends App {
     }
   }
 
+  val geocode = udf {
+    Nominamitm(_)
+  }
+
   val spark = SparkSession
     .builder()
     .appName("GeoMapper")
     .master("local[*]")
     .getOrCreate()
 
-  val geocode = udf {
-    Nominamitm(_)
-  }
-
   import spark.implicits._
 
-  val in = spark.readStream
+  val in = spark
+    .readStream
     .format("kafka")
     .option("kafka.bootstrap.servers", "localhost:9092")
     .option("subscribe", "locations")
@@ -61,10 +62,13 @@ object Main extends App {
   val addresses = in
     .select($"value".cast("string"))
     .withColumn("value", geocode($"value"))
+    .filter($"value" =!= "null")
+    .select($"value.*")
 
   //val json = addresses.select($"value.*").select(to_json(struct("state", "country")) as "value")
 
-  addresses.writeStream
+  addresses
+    .writeStream
     .outputMode("append")
     .format("console")
     .option("truncate", "false")
