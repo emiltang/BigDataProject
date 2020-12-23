@@ -1,13 +1,15 @@
-package dk.sdu
-
 import fr.dudie.nominatim.client.JsonNominatimClient
 import fr.dudie.nominatim.client.request.NominatimSearchRequest
 import org.apache.http.impl.client.HttpClients
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions.udf
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types._
+
 
 
 object Main extends App {
+
+  val kafkaURL = "localhost:9092"
 
   val Nominamitm = new JsonNominatimClient(
     "http://node1:7070",
@@ -32,57 +34,45 @@ object Main extends App {
 
       (state, country) match {
         case (Some(state), Some(country)) => Some((state, country))
-        case _ => None
+        case _                            => None
       }
     }
   }
 
-  val geocode = udf {
-    Nominamitm(_)
-  }
+  val geocode = udf { Nominamitm(_) }
 
   val spark = SparkSession
     .builder()
-    .appName("GeoMapper")
+    .appName("Geocoder")
     .master("local[*]")
     .getOrCreate()
 
   import spark.implicits._
 
-  val in = spark
-    .readStream
+  spark.readStream
     .format("kafka")
-    .option("kafka.bootstrap.servers", "localhost:9092")
+    .option("kafka.bootstrap.servers", kafkaURL)
     .option("subscribe", "locations")
-    .option("startingOffsets", "earliest")
-    // .option("max.poll.records", 10)
-    //.option("failOnDataLoss", value = false)
+    .option("startingOffsets", "latest")
     .load()
-
-  val addresses = in
-    .select($"value".cast("string"))
+    .selectExpr("CAST(value AS STRING)")
     .withColumn("value", geocode($"value"))
-    .filter($"value" =!= "null")
-    .select($"value.*")
-
-  //val json = addresses.select($"value.*").select(to_json(struct("state", "country")) as "value")
-
-  addresses
+    .filter($"value".isNotNull)
+    .select($"value._1".as("state"), $"value._2".as("country"))
+    .select(to_json(struct($"state", $"country")).as("value"))
     .writeStream
-    .outputMode("append")
-    .format("console")
-    .option("truncate", "false")
+    .format("kafka")
+    .option("kafka.bootstrap.servers", kafkaURL)
+    .option("topic", "states")
+    .option("checkpointLocation", "hdfs:///kafka-checkpoint-geocode")
     .start()
     .awaitTermination()
 
-  //  json.writeStream
-  //    .format("kafka")
-  //    .option("kafka.bootstrap.servers",)
-  //    .option("topic", "locations")
-  //    .option("checkpointLocation", "hdfs:///kafka-checkpoint")
-  //    .start()
-  //    .awaitTermination()
-
-  //case class Address(state: String = "", country: String = "")
+//     .writeStream
+//     .outputMode("append")
+//     .format("console")
+//     .option("truncate", "false")
+//     .start()
+//     .awaitTermination()
 
 }

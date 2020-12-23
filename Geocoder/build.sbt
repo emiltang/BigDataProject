@@ -4,7 +4,6 @@ version := "0.1"
 
 scalaVersion := "2.12.10"
 
-idePackagePrefix := Some("dk.sdu")
 
 val sparkVersion = "3.0.1"
 val slf4j = "1.7.30"
